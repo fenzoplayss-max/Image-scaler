@@ -109,20 +109,66 @@ def smart_pixel_prediction(img, scale_factor):
 def advanced_denoise(img, strength=10):
     """
     Advanced non-local means denoising with adaptive strength.
+    Processes in chunks for large images to avoid memory issues.
     """
+    h, w = img.shape[:2]
+    
+    # For very large images, process in chunks
+    if h > 4000 or w > 4000:
+        chunk_size = 1000
+        result = img.copy()
+        
+        for y in range(0, h, chunk_size):
+            for x in range(0, w, chunk_size):
+                y_end = min(y + chunk_size, h)
+                x_end = min(x + chunk_size, w)
+                
+                # Add overlap for better edge handling
+                overlap = 50
+                y_start = max(0, y - overlap)
+                x_start = max(0, x - overlap)
+                y_end_ext = min(h, y_end + overlap)
+                x_end_ext = min(w, x_end + overlap)
+                
+                chunk = img[y_start:y_end_ext, x_start:x_end_ext]
+                
+                if len(chunk.shape) == 3:
+                    denoised_chunk = cv2.fastNlMeansDenoisingColored(
+                        chunk, None, 
+                        strength, strength,
+                        7, 21
+                    )
+                else:
+                    denoised_chunk = cv2.fastNlMeansDenoising(
+                        chunk, None, 
+                        strength,
+                        7, 21
+                    )
+                
+                # Calculate actual region (without overlap)
+                actual_y_start = (y - y_start)
+                actual_x_start = (x - x_start)
+                actual_h = y_end - y
+                actual_w = x_end - x
+                
+                result[y:y_end, x:x_end] = denoised_chunk[
+                    actual_y_start:actual_y_start+actual_h,
+                    actual_x_start:actual_x_start+actual_w
+                ]
+        
+        return result
+    
+    # Standard processing for smaller images
     if len(img.shape) == 3:
-        # Color image - use fastNlMeansDenoisingColored
+        # Color image - use fastNlMeansDenoisingColored (positional args)
         denoised = cv2.fastNlMeansDenoisingColored(img, None, 
-                                                   h=strength, 
-                                                   hForColorComponents=strength,
-                                                   templateWindowSize=7,
-                                                   searchWindowSize=21)
+                                                   strength, strength,
+                                                   7, 21)
     else:
         # Grayscale
         denoised = cv2.fastNlMeansDenoising(img, None, 
-                                           h=strength,
-                                           templateWindowSize=7,
-                                           searchWindowSize=21)
+                                           strength,
+                                           7, 21)
     return denoised
 
 
