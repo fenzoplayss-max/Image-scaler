@@ -1,1 +1,1 @@
-(image_enhancer.py is a source file, and there are no build artifacts, dependencies, or temp files in the changes)
+Nothing should be ignored in this case, as the changes only include source code (.py) and image files (.jpg), which are not build artifacts, dependencies, or temporary files.
